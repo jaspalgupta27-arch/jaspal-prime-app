@@ -9,45 +9,38 @@ st.title("🔐 Local Prime Coordinate Locking Protocol")
 st.write("An Absolute Algebraic Verification Method by **Jaspal Gupta**")
 st.write("---")
 
+# ==========================================
+# 1. शुद्ध जसपाल गुप्ता थ्योरम (नो सीव, नो मेमोरी एरर)
+# ==========================================
 def jaspal_gupta_finder(N):
     start_time = time.perf_counter()
     d = math.isqrt(N) + 1
-    sieve = [True] * (d + 1)
-    for p in range(2, math.isqrt(d) + 1):
-        if sieve[p]:
-            for i in range(p*p, d + 1, p):
-                sieve[i] = False
-    small_primes = [p for p in range(2, d + 1) if sieve[p]]
     
-    p_core = []
-    p_free = {}
-    for p in small_primes:
-        remainder = N % p
-        if remainder == 0:
-            p_core.append(p)
-        else:
-            p_free[p] = remainder
-            
     locked_x = None
     for x in range(1, d + 1):
-        is_locked = True
-        for c in p_core:
-            if x % c == 0:
-                is_locked = False
-                break
-        if not is_locked: continue
-            
-        for p, r_p in p_free.items():
-            if x % p == (p - r_p):
-                is_locked = False
-                break
-        if is_locked:
+        candidate = N + x
+        is_pure_prime = True
+        
+        if candidate % 2 == 0:
+            if candidate != 2:
+                is_pure_prime = False
+        else:
+            max_check = math.isqrt(candidate)
+            for p in range(3, max_check + 1, 2):
+                if candidate % p == 0:
+                    is_pure_prime = False
+                    break
+                    
+        if is_pure_prime:
             locked_x = x
             break
             
     end_time = time.perf_counter()
-    return N + locked_x, locked_x, (end_time - start_time) * 1000
+    return N + locked_x, locked_x, d, (end_time - start_time) * 1000
 
+# ==========================================
+# 2. मिलर-रैबिन टेस्ट (समान संख्या पर जांच हेतु)
+# ==========================================
 def miller_rabin_check(n, k=40):
     if n == 2 or n == 3: return True
     if n % 2 == 0: return False
@@ -75,7 +68,11 @@ def miller_rabin_finder(N):
             return candidate, (end_time - start_time) * 1000
         candidate += 1
 
-anchor_str = st.text_input("यहाँ कोई भी बड़ा ईवन नंबर (Even Anchor N) डालें:", value="100000000")
+# ==========================================
+# मोबाइल यूआई (User Interface)
+# ==========================================
+
+anchor_str = st.text_input("यहाँ कोई भी बड़ा ईवन नंबर (Even Anchor N) डालें:", value="50000000000000000")
 
 if st.button("🔴 लाइव टेस्ट मुकाबला शुरू करें"):
     try:
@@ -85,13 +82,13 @@ if st.button("🔴 लाइव टेस्ट मुकाबला शुर�
         elif anchor_input % 2 != 0:
             st.error("कृपया केवल सम संख्या (Even Number) ही डालें!")
         else:
-            with st.spinner('असीमित ग्रिड पर गणना की जा रही है...'):
-                prime_gupta, offset_x, time_gupta = jaspal_gupta_finder(anchor_input)
-                prime_miller, time_miller = miller_rabin_finder(anchor_input)
+            with st.spinner('ग्रिड पर लाइव मुकाबला चल रहा है...'):
+                pure_prime, offset_x, boundary_d, time_gupta = jaspal_gupta_finder(anchor_input)
+                _, time_miller = miller_rabin_finder(anchor_input)
                 
-                st.success(f"🎯 शुद्ध प्राइम नंबर खोजा गया: **{prime_gupta}** (कोऑर्डिनेट Offset x = {offset_x})")
+                st.success(f"🎯 शुद्ध प्राइम नंबर खोजा गया: **{pure_prime}** (कोऑर्डिनेट Offset x = {offset_x})")
                 
-                st.write("### ⏱️ गति का मुकाबला (Speed Comparison)")
+                st.write("### ⏱ *गति का मुकाबला (Speed Comparison)*")
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("जसपाल गुप्ता थ्योरम", f"{time_gupta:.4f} ms", "100% अचूक")
@@ -105,7 +102,9 @@ if st.button("🔴 लाइव टेस्ट मुकाबला शुर�
                     st.balloons()
                     st.info(f"🏆 **परिणाम:** जसपाल गुप्ता थ्योरम ने मिलर-रैबिन से **{time_saved:.4f} मिलीसेकंड ({percent_saved:.2f}%) कम समय लिया!**")
                 else:
-                    st.warning("इस रेंज पर मिलर-रैबिन की गति अधिक रही, परन्तु जसपाल गुप्ता प्रोटोकॉल 100% सटीक (Deterministic) रहा।")
+                    time_diff = time_gupta - time_miller
+                    st.warning(f"इस विशिष्ट मान पर मिलर-रैबिन {time_diff:.4f} ms तेज़ रहा, परन्तु जसपाल गुप्ता प्रोटोकॉल 100% सटीक (Deterministic) साबित हुआ।")
+                    
     except ValueError:
         st.error("कृपया केवल वैध अंक (Numbers) ही टाइप करें!")
 
